@@ -1,0 +1,42 @@
+name: Update HeyVedu cask
+
+# Releases are published to app.heyvedu.com, not to GitHub, so poll the Sparkle
+# appcast and bump the cask when it names a newer version.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bump version and checksum
+        id: bump
+        run: |
+          set -euo pipefail
+          cask=Casks/heyvedu.rb
+          appcast="$(curl -fsSL https://app.heyvedu.com/updates/appcast.xml)"
+          latest="$(sed -n 's:.*<sparkle\:shortVersionString>\(.*\)</sparkle\:shortVersionString>.*:\1:p' <<< "$appcast" | head -1)"
+          current="$(sed -n 's/^  version "\(.*\)"$/\1/p' "$cask")"
+          [[ "$latest" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Unexpected version: '$latest'"; exit 1; }
+          if [[ "$latest" == "$current" ]]; then
+            echo "Already at $current"
+            exit 0
+          fi
+          sha="$(curl -fsSL "https://app.heyvedu.com/updates/HeyVedu-$latest-arm64.dmg" | sha256sum | cut -d' ' -f1)"
+          sed -i -E "s/^  version \".*\"$/  version \"$latest\"/; s/^  sha256 \".*\"$/  sha256 \"$sha\"/" "$cask"
+          echo "version=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Commit
+        if: steps.bump.outputs.version != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "heyvedu ${{ steps.bump.outputs.version }}"
+          git push

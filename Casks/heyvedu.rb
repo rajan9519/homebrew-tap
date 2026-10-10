@@ -1,6 +1,6 @@
 cask "heyvedu" do
-  version "26.10.0901"
-  sha256 "22762deff6acee7905b130d4544415ea47df86c90b4b60ef28183c8005db758b"
+  version "26.10.1001"
+  sha256 "d23ad2af3ec23f9b558d63ec3e57e3edb635521397da58cd7987a5c607eaf639"
 
   url "https://app.heyvedu.com/updates/HeyVedu-#{version}-arm64.dmg"
   name "HeyVedu"
